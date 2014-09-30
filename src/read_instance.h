@@ -1,7 +1,0 @@
-/**
- *
- */
-class ReadInstance {
-    public:
-    private:
-};
