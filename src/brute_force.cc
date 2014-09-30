@@ -1,19 +1,124 @@
 /**
- * KNAPSACK PROBLEM - bruteforce solution
- * @author Martin Kersner, m.kersner@gmail.com
+ * @file
+ * @author Martin Kersner <m.kersner@gmail.com>
  * @date 09/30/2014
- * @last_update 09/30/2014
+ *
+ * @section DESCRIPTION
+ * KNAPSACK PROBLEM - brute force solution
  */
 
-#include <iostream>
+#include "brute_force.h"
 
-#include "read_instance.h"
-
-int main (int arcg, char** argv) {
+int main(int argc, char** argv) {
     
-    // readfile
-    // create structure
-    // compute bute force
-    // print to output
+    if (argc >= 2) {
+        char * file_name = argv[1];
+        auto inst = new Instances(file_name);
+        //Instances * sol = SolveBruteForce(inst);
+        SolveBruteForce(inst);
+    }
     return 0;
+}
+
+/**
+ * Solves Knapsack problem using brute force.
+ * @todo   add return value for printing solutions
+ *
+ * @param  inst  all loaded instances
+ */
+void SolveBruteForce(Instances * inst) {
+    int max_weight = inst->GetMaxWeight();
+    int max_item = inst->GetMaxItem();
+    int number_item = inst->GetNumberItems();
+    std::vector<Instance *> all_instances =  inst->GetAllInstances();
+
+    std::vector<std::vector<bool>> * combinations = GenerateCombinations(number_item, max_item);
+    std::vector<bool> solution;
+
+    for (auto inst_it = all_instances.begin(); inst_it != all_instances.end(); ++inst_it) {
+        solution = Evaluate(*inst_it, combinations, max_weight);
+        //StoreSolution(*inst_it, solution);
+        (*inst_it)->solution = solution;
+        PrintSolution(*inst_it);
+    }
+}
+
+/**
+ * Generate all possible combinations.
+ *
+ * @param len       length of vector
+ * @param max_item  maximum number of 1's
+ * @return          all_combinations
+ */
+std::vector<std::vector<bool>> * GenerateCombinations(int len, int max_item) {
+    auto combinations = new std::vector<std::vector<bool>>;
+
+    for (int i = 1; i <= max_item; ++i) {
+        std::vector<bool> v(len);
+        std::fill(v.begin() + len - i, v.end(), true);
+
+        do {
+            combinations->push_back(v);
+        } while (std::next_permutation(v.begin(), v.end()));
+    }
+
+    return combinations;
+}
+
+
+std::vector<bool> Evaluate(Instance * inst, std::vector<std::vector<bool>> * comb, int knapsack_capacity) {
+    std::vector<bool> solution;
+    int min_cost = 0;
+    Evaluation ev;
+
+    for (auto comb_it = comb->begin() ; comb_it != comb->end(); ++comb_it) {
+        ev = EvaluateCombination(inst, &(*comb_it));
+
+        if (ev.weight <= knapsack_capacity)  // TODO now skips solutions with same weight 
+           if (ev.cost > min_cost) {  // TODO now skips solutions with same cost
+               solution = *comb_it;
+               min_cost = ev.cost;
+           }
+    }
+
+    // stores sum of all weight
+    inst->sum_cost = min_cost;
+
+    return solution;
+}
+
+Evaluation EvaluateCombination(Instance * inst, std::vector<bool> * comb) {
+    Evaluation ev;
+    ev.cost = 0;
+    ev.weight = 0;
+
+    auto comb_it = comb->begin();
+    auto w_it = inst->weight.begin();
+    for (auto c_it = inst->cost.begin() ; c_it != inst->cost.end(); ++c_it, ++w_it, ++comb_it) {
+        if (*comb_it == true) {
+           ev.cost += *c_it; 
+           ev.weight += *w_it; 
+        }
+    }
+
+    return ev;
+}
+
+void PrintVector(std::vector<bool> * vec) {
+    for (std::vector<bool>::iterator it=vec->begin(); it!=vec->end(); ++it)
+        std::cout << *it << " ";
+
+    std::cout << std::endl;
+}
+
+void PrintSolution(Instance * inst) {
+    std::string space = " ";
+
+    std::cout << inst->id << space;
+    std::cout << inst->solution.size() << space;
+    std::cout << inst->sum_cost << space;
+    for (auto sol_it = inst->solution.begin(); sol_it != inst->solution.end(); ++sol_it)
+        std::cout << space << *sol_it;
+
+    std::cout << std::endl;
 }
