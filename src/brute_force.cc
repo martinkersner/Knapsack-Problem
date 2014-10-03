@@ -4,43 +4,49 @@
  * @date 09/30/2014
  *
  * @section DESCRIPTION
- * KNAPSACK PROBLEM - brute force solution
+ *
+ * KNAPSACK PROBLEM 
+ *
+ * Brute force solution.
  */
 
 #include "brute_force.h"
 
 int main(int argc, char** argv) {
     
-    if (argc >= 2) {
+    if (argc >= MIN_PARAM) {
         char * file_name = argv[1];
         auto inst = new Instances(file_name);
-        //Instances * sol = SolveBruteForce(inst);
         SolveBruteForce(inst);
+        inst->PrintSolutions();
+
+        delete inst;
     }
-    return 0;
+
+    return EXIT_SUCCESS;
 }
 
 /**
- * Solves Knapsack problem using brute force.
+ * Solves knapsack problem using brute force.
  * @todo   add return value for printing solutions
  *
  * @param  inst  all loaded instances
  */
 void SolveBruteForce(Instances * inst) {
-    int max_weight = inst->GetMaxWeight();
-    int max_item = inst->GetMaxItem();
-    int number_item = inst->GetNumberItems();
+    int capacity = inst->GetCapacity();
+    int volume = inst->GetVolume();
+    int max_items = inst->GetMaxItems();
     std::vector<Instance *> all_instances =  inst->GetAllInstances();
 
-    std::vector<std::vector<bool>> * combinations = GenerateCombinations(number_item, max_item);
+    std::vector<std::vector<bool>> * combinations = GenerateCombinations(max_items, volume);
     std::vector<bool> solution;
 
     for (auto inst_it = all_instances.begin(); inst_it != all_instances.end(); ++inst_it) {
-        solution = Evaluate(*inst_it, combinations, max_weight);
-        //StoreSolution(*inst_it, solution);
+        solution = Evaluate(*inst_it, combinations, capacity);
         (*inst_it)->solution = solution;
-        PrintSolution(*inst_it);
     }
+
+    delete combinations;
 }
 
 /**
@@ -75,7 +81,7 @@ std::vector<bool> Evaluate(Instance * inst, std::vector<std::vector<bool>> * com
         ev = EvaluateCombination(inst, &(*comb_it));
 
         if (ev.weight <= knapsack_capacity)  // TODO now skips solutions with same weight 
-           if (ev.cost > min_cost) {  // TODO now skips solutions with same cost
+           if (ev.cost >= min_cost) {  // TODO now skips solutions with same cost
                solution = *comb_it;
                min_cost = ev.cost;
            }
@@ -107,18 +113,6 @@ Evaluation EvaluateCombination(Instance * inst, std::vector<bool> * comb) {
 void PrintVector(std::vector<bool> * vec) {
     for (std::vector<bool>::iterator it=vec->begin(); it!=vec->end(); ++it)
         std::cout << *it << " ";
-
-    std::cout << std::endl;
-}
-
-void PrintSolution(Instance * inst) {
-    std::string space = " ";
-
-    std::cout << inst->id << space;
-    std::cout << inst->solution.size() << space;
-    std::cout << inst->sum_cost << space;
-    for (auto sol_it = inst->solution.begin(); sol_it != inst->solution.end(); ++sol_it)
-        std::cout << space << *sol_it;
 
     std::cout << std::endl;
 }
