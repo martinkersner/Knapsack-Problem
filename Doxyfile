@@ -18,5 +18,5 @@ USE_MATHJAX            = YES
 PAPER_TYPE             = letter
 HIDE_UNDOC_RELATIONS   = NO
 HAVE_DOT               = YES
-CALL_GRAPH             = YES
-CALLER_GRAPH           = YES
+CALL_GRAPH             = NO
+CALLER_GRAPH           = NO

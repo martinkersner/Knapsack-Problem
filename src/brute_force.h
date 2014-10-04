@@ -19,7 +19,7 @@ struct Evaluation {
     int weight;
 };
 
-void SolveBruteForce(Instances *);
+void SolveBruteForce(Instances * inst);
 std::vector<std::vector<bool>> * GenerateCombinations(int, int);
 std::vector<bool> Evaluate(Instance *, std::vector<std::vector<bool>> *, int);
 Evaluation EvaluateCombination(Instance *, std::vector<bool> *);

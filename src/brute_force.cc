@@ -80,8 +80,8 @@ std::vector<bool> Evaluate(Instance * inst, std::vector<std::vector<bool>> * com
     for (auto comb_it = comb->begin() ; comb_it != comb->end(); ++comb_it) {
         ev = EvaluateCombination(inst, &(*comb_it));
 
-        if (ev.weight <= knapsack_capacity)  // TODO now skips solutions with same weight 
-           if (ev.cost >= min_cost) {  // TODO now skips solutions with same cost
+        if (ev.weight <= knapsack_capacity) 
+           if (ev.cost >= min_cost) {
                solution = *comb_it;
                min_cost = ev.cost;
            }
