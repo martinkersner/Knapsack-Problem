@@ -102,6 +102,42 @@ void Instances::PrintSolutions() {
 }
 
 /**
+ * Compute heuristic for all instance values and sort them in decreasing order.
+ */
+void Instances::ComputeHeuristic() {
+    int len;
+    Instance * inst = NULL;
+    std::vector<int>::iterator cost_it;
+    int h;
+
+    for (auto inst_it = this->all_instances.begin(); inst_it != this->all_instances.end(); ++inst_it) {
+        inst = *inst_it;
+        len = inst->weight.size();
+
+        cost_it = inst->cost.begin();
+        for (auto weight_it= inst->weight.begin(); weight_it < inst->weight.end();  ++weight_it, ++cost_it) {
+            h = (*cost_it) / (*weight_it);
+            inst->heuristic.push_back(h);
+        }
+    }
+}
+
+/**
+ * Sorts vector of float values.
+ */
+std::vector<float> Instances::OrderVector(std::vector<float> const& values) {
+    std::vector<float> indices(values.size());
+    std::iota(begin(indices), end(indices), static_cast<float>(0));
+
+    std::sort(
+            begin(indices), end(indices),
+            [&](float a, float b) { return values[a] < values[b]; }
+            );
+
+    return indices;
+}
+
+/**
  * Checks if given file exists.
  */
 inline bool Instances::ExistFile(const char * file_name) {
@@ -206,4 +242,5 @@ void Instances::PrintInstance(Instance * inst) {
 inline void Instances::PushInstance(Instance * inst) {
     this->all_instances.push_back(inst);
 }
+
 

@@ -10,18 +10,21 @@
 #include <algorithm>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <string>
 #include <vector>
 
 #include <stdlib.h>
 
 struct Instance {
-    int id;                     // ID of instance
-    std::vector<int> weight;    // weight of all items
-    std::vector<int> cost;      // cost of all items
+    int id;                        // ID of instance
+    std::vector<int> weight;       // weight of all items
+    std::vector<int> cost;         // cost of all items
 
-    int sum_cost;               // sum of all item costs 
-    std::vector<bool> solution; // solution for current items
+    // auxiliary variables
+    int sum_cost;                  // sum of all item costs 
+    std::vector<bool> solution;    // solution for current items
+    std::vector<float> heuristic;  // computed heuristic value (cost/weight)
 };
 
 class Instances {
@@ -75,6 +78,19 @@ class Instances {
          */
         void PrintSolutions();
 
+        /**
+         * Compute heuristic for all instance values and sort them in decreasing order.
+         */
+        void ComputeHeuristic();
+
+        /**
+         * Sorts vector of float values.
+         *
+         * @param  values  vector of float values
+         * @return         vector of indexes according to sorted values
+         */
+        std::vector<float> OrderVector(std::vector<float> const& values);
+
     private:
         /**
          * Checks if given file exists.
@@ -123,6 +139,7 @@ class Instances {
          * @param  inst  pointer to instance
          */
         inline void PushInstance(Instance * inst);
+
 
         std::vector<Instance *> all_instances;
         int max_items;  // number of items which can be chosen
