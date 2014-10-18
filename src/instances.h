@@ -16,6 +16,14 @@
 
 #include <stdlib.h>
 
+/**
+ * For branch and bound purposes.
+ */
+//struct InstanceItem {
+//    int position;
+//    std::vector<bool> knapsack_distribution;
+//};
+
 struct Instance {
     int id;                        // ID of instance
     std::vector<int> weight;       // weight of all items
