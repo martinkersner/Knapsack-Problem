@@ -66,6 +66,7 @@ std::vector<bool> Evaluate(Instance * inst, int capacity, int max_items) {
     inst->sum_cost = S.cost;
 
     // deallocate all nodes
+    DeleteTable(&table);
 
     return S.solution_vector;
 }
@@ -268,4 +269,17 @@ std::vector<bool> FindPath(Cell * cell) {
     path.erase(path.end());
 
     return path;
+}
+
+/**
+ * Deallocate all cells from table.
+ *
+ * @param  table  pointer to used table/network
+ */
+void DeleteTable(std::vector<std::vector<Cell*>> * table) {
+    for (auto t = table->begin(); t != table->end(); ++t) {
+        for (auto c = (*t).begin(); c != (*t).end(); ++c) {
+            delete((*c));
+        }
+    }
 }

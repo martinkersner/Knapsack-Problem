@@ -37,5 +37,6 @@ void PrintBinaryVector(std::vector<bool> * bv);
 std::vector<std::vector<Cell *>> CreateNetwork(Instance * inst, int capacity);
 Solution SolveNetwork(Instance * inst, std::vector<std::vector<Cell *>> * table);
 std::vector<bool> FindPath(Cell * cell);
+void DeleteTable(std::vector<std::vector<Cell*>> * table);
 
 #endif //DYNAMIC_H
