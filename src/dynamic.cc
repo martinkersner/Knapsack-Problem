@@ -144,7 +144,7 @@ std::vector<std::vector<Cell *>> CreateNetwork(Instance * inst, int capacity) {
             // first arrow; left direction
             tmp_weight = (*c)->weight_index;
 
-            if (ExistCell(&tmp_column, tmp_weight) == NULL) {
+            if ((tmp_cell = ExistCell(&tmp_column, tmp_weight)) == NULL) {
                 tmp_cell = CreateCell(tmp_weight);
                 tmp_column.push_back(tmp_cell);
             }
@@ -152,7 +152,7 @@ std::vector<std::vector<Cell *>> CreateNetwork(Instance * inst, int capacity) {
             (*c)->forward_first = tmp_cell;
 
             // second arrow; bottom left direction
-            if ( (tmp_weight = (*c)->weight_index - (*w)) >= 0) {
+            if ( (tmp_weight = (*c)->weight_index - (*w) ) >= 0) {
                 if ((tmp_cell = ExistCell(&tmp_column, tmp_weight)) == NULL) {
                     tmp_cell = CreateCell(tmp_weight);
                     tmp_column.push_back(tmp_cell);
