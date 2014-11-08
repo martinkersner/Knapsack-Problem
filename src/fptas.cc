@@ -15,8 +15,10 @@
 int main(int argc, char **argv) {
     if (argc >= MIN_PARAM) {
         char * file_name = argv[1];
+        int precision = atoi(argv[2]);
+
         auto inst = new Instances(file_name);
-        SolveFptas(inst);
+        SolveFptas(inst, precision);
         inst->PrintSolutions();
 
         delete inst;
@@ -29,14 +31,19 @@ int main(int argc, char **argv) {
 /**
  * Solves given instances by FPTAS method.
  *
- * @param  inst  different instances of knapsack problem
+ * @param   inst       different instances of knapsack problem
+ * @param   precision  number of LSB which we can ommit
  */
-void SolveFptas(Instances * inst) {
+void SolveFptas(Instances * inst, int precision) {
     int capacity = inst->GetCapacity();
     int volume = inst->GetVolume();
     int max_items = inst->GetMaxItems();
 
     std::vector<Instance *> all_instances =  inst->GetAllInstances();
+
+    // reduction of precision
+    ReducePrecisionInstances(all_instances, precision);
+
     std::vector<bool> solution;
 
     for (auto inst_it = all_instances.begin(); inst_it != all_instances.end(); ++inst_it) {
@@ -65,13 +72,12 @@ std::vector<bool> Evaluate(Instance * inst, int capacity, int max_items) {
 
     std::vector<bool> solution = GetSolutionPath(&table, c_w, inst);
 
-//    // compute network values
-//    Solution S = SolveNetwork(inst, &table);
+    // set the best cost of particular knapsack configuration
     inst->sum_cost = c_w->cost;
-//
-//    // deallocate all nodes
-//    DeleteTable(&table);
-//
+
+    // deallocate all nodes
+    DeleteTable(table);
+
     return solution;
 }
 
@@ -111,27 +117,28 @@ std::vector<std::vector<Cell *>> CreateNetwork(Instance * inst, int capacity) {
             tmp_weight = (*col)->weight;
 
             // recreate the same cell
-            // TODO exist cell?
-            tmp_cell = CreateCell(tmp_cost, tmp_weight, *col);
-            tmp_column.push_back(tmp_cell);
+            if (!ExistCell(tmp_column, tmp_cost, tmp_weight)) {
+                tmp_cell = CreateCell(tmp_cost, tmp_weight, *col);
+                tmp_column.push_back(tmp_cell);
+            }
 
             // create new cell
-            tmp_cell = CreateCell((*c), (*w), NULL);
-            tmp_column.push_back(tmp_cell);
+            if (!ExistCell(tmp_column, *c, *w)) {
+                tmp_cell = CreateCell((*c), (*w), NULL);
+                tmp_column.push_back(tmp_cell);
+            }
 
             // summed cell
             // add weight and cost to the current examined item
-            // TODO exist cell?
-            tmp_cell = CreateCell(tmp_cost+(*c), tmp_weight+(*w), NULL);
-            tmp_column.push_back(tmp_cell);
-
-            //std::cout << "REC " << tmp_cost << " "<< tmp_weight << std::endl;
-            //std::cout << "NEW " << tmp_cost+(*c) << " "<< tmp_weight+(*w) << std::endl;
+            if (!ExistCell(tmp_column, tmp_cost+(*c), tmp_weight+(*w))) {
+                tmp_cell = CreateCell(tmp_cost+(*c), tmp_weight+(*w), NULL);
+                tmp_column.push_back(tmp_cell);
+            }
         }
 
         table.insert(table.begin(), tmp_column); 
-
     }
+
 
     return table;
 }
@@ -148,9 +155,7 @@ Cell * CreateCell(int c, int w, Cell * p_c) {
 
     cell->cost = c;
     cell->weight = w;
-    //cell->weight_index = wi;
     cell->forward = p_c;
-    //cell->forward_second = NULL;
 
     return cell;
 }
@@ -208,7 +213,12 @@ bool TestCellWeight(Cell * c, int capacity) {
 }
 
 /**
+ * Goes through the network and follows the path from the best solution to the beginning.
  *
+ * @param   table
+ * @param   cell
+ * @param   inst   
+ * @return         solution path
  */
 std::vector<bool> GetSolutionPath(std::vector<std::vector<Cell *>> * table, Cell * cell, Instance * inst) {
     auto w_it = inst->weight.end()-1;
@@ -222,14 +232,16 @@ std::vector<bool> GetSolutionPath(std::vector<std::vector<Cell *>> * table, Cell
     while (tmp_weight > 0) {
         if (forward_cell->forward == NULL) {
             path.insert(path.begin(), 1);
-      //      std::cout << 1 << std::flush;
 
             tmp_weight -= (*w_it);
+
+            if (tmp_weight <= 0)
+                break;
+
             forward_cell = FindNextCell(&(*col_it), tmp_weight);
         }
         else {
             path.insert(path.begin(), 0);
-    //        std::cout << 0 << std::flush;
             forward_cell = forward_cell->forward;
         }
 
@@ -254,6 +266,7 @@ Cell * FindNextCell(std::vector<Cell *> * column, int weight) {
     Cell * tmp_cell = NULL;
 
     for (auto col_it = column->begin(); col_it != column->end(); ++col_it) {
+
         if ((*col_it)->weight == weight) {
             if (tmp_cell == NULL) 
                 tmp_cell = *col_it;
@@ -275,7 +288,53 @@ void PrintCell(Cell * cell) {
 }
 
 /**
+ * Prints all cell stored in given column.
  *
+ * @param   column
+ */
+void  PrintColumn(std::vector<Cell *> & column) {
+    for (auto c_it = column.begin(); c_it != column.end(); ++c_it)
+        PrintCell(*c_it);
+}
+
+/**
+ * Searches for a cell with specific parameters in column.
+ *
+ * @param   column
+ * @param   cost
+ * @param   weight  
+ * @return          true if column contains cell with tested cost and weight, 
+ *                  otherwise false
+ */
+bool ExistCell(std::vector<Cell *> & column, int cost, int weight) {
+    for (auto c_it = column.begin(); c_it != column.end(); ++c_it)
+        if (EqualCell(*c_it, cost, weight))
+            return true;
+    
+    return false;
+}
+
+/**
+ * Checks if cell contain given cost and weight.
+ *
+ * @param   cell
+ * @param   cost
+ * @param   weight  
+ * @return          true if cell contains tested cost and weight, otherwise false
+ */
+bool EqualCell(Cell * cell, int cost, int weight) {
+    if (cell->cost == cost && cell->weight == weight)
+        return true;
+    else
+        return false;
+}
+
+/**
+ * Adds binary zeros to given path to extend binary solution to desired length.
+ *
+ * @param   path
+ * @param   length  
+ * @return          rovered path with right length of binary vector
  */
 std::vector<bool> RecoverPath(std::vector<bool> * path, int length) {
     int d;
@@ -285,6 +344,30 @@ std::vector<bool> RecoverPath(std::vector<bool> * path, int length) {
         for (int i = 0; i < d; ++i) full_path.insert(full_path.begin(), 0);
 
     return full_path;
+}
+
+/**
+ * Deallocated all cells from given table.
+ *
+ * @param   table
+ */
+void DeleteTable(std::vector<std::vector<Cell *>> & table) {
+    for (auto t_it = table.begin(); t_it != table.end(); ++t_it)
+        for (auto c_it = t_it->begin(); c_it != t_it->end(); ++c_it)
+            delete *c_it;
+}
+
+/**
+ * Reduces precison of cost in all later examined instances.
+ *
+ * @param   instances
+ * @param   precision
+ */
+void ReducePrecisionInstances(std::vector<Instance *> & instances, int precision) {
+    // cost
+    for (auto i_it = instances.begin(); i_it != instances.end(); ++i_it)
+        for (auto c_it = (*i_it)->cost.begin(); c_it != (*i_it)->cost.end(); ++c_it)
+            *c_it = bit2int(ReducePrecision(*c_it, precision));
 }
 
 /**
@@ -299,7 +382,6 @@ void PrintBinaryVector(std::vector<bool> * bv) {
     std::cout << std::endl;
 }
 
-
 /**
  * Reducts precision of given number. Ommited precision is set by parameter p.
  *
@@ -307,7 +389,8 @@ void PrintBinaryVector(std::vector<bool> * bv) {
  * @param   p  desired precision
  * @return     binary number with reducted precision
  */
-bit10 ReducePrecision(bit10 b, int p) {
+bit ReducePrecision(int n, int p) {
+    bit b(n);
     return CreateMask(p)&=b;
 }
 
@@ -317,8 +400,8 @@ bit10 ReducePrecision(bit10 b, int p) {
  * @param  l  lenght of masked bits
  * @return    binary mask
  */
-bit10 CreateMask(int l) {
-    bit10 mask(0);
+bit CreateMask(int l) {
+    bit mask(0);
 
     for (int i = 0; i < BITS; ++i)
         if (i >= l) mask.set(i, 1);
@@ -332,6 +415,6 @@ bit10 CreateMask(int l) {
  * @param  b  binary number
  * @return    integer number
  */
-int bit2int(bit10 b) {
+int bit2int(bit b) {
     return (int)(b.to_ulong());
 }

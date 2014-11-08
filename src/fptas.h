@@ -8,24 +8,19 @@
 #define FPTAS_H 
 
 #include <bitset>
+#include <stdlib.h>
 
 #include "instances.h"
 
-#define MIN_PARAM    2
-#define BITS        10
+#define MIN_PARAM    3
+#define BITS        20
 
-typedef std::bitset<BITS> bit10;
+typedef std::bitset<BITS> bit;
 
 struct Cell {
     int cost;
     int weight;
-    //int weight_index;
     Cell * forward;
-    //Cell * forward_second;
-
-    // 0 left; first
-    // 1 bottom left; second
-    //int direction;
 };
 
 struct Solution {
@@ -33,8 +28,7 @@ struct Solution {
     int cost;
 };
 
-
-void SolveFptas(Instances * inst);
+void SolveFptas(Instances * inst, int precision);
 std::vector<std::vector<Cell *>> CreateNetwork(Instance * inst, int capacity);
 std::vector<bool> Evaluate(Instance * inst, int capacity, int max_items);
 std::vector<std::vector<Cell *>> CreateNetwork(Instance * inst, int capacity);
@@ -47,9 +41,14 @@ Cell * FindNextCell(std::vector<Cell *> * column, int weight);
 void PrintCell(Cell * cell);
 std::vector<bool> RecoverPath(std::vector<bool> * path, int length);
 void PrintBinaryVector(std::vector<bool> * bv);
+void  PrintColumn(std::vector<Cell *> & column);
+bool ExistCell(std::vector<Cell *> & column, int cost, int weight);
+bool EqualCell(Cell * cell, int cost, int weight);
+void DeleteTable(std::vector<std::vector<Cell *>> & table);
+void ReducePrecisionInstances(std::vector<Instance *> & instances, int precision);
 
-bit10 CreateMask(int l);
-bit10 ReducePrecision(bit10 b, int p);
-int bit2int(bit10 b);
+bit CreateMask(int l);
+bit ReducePrecision(int n, int p);
+int bit2int(bit b);
 
 #endif //FPTAS_H 
