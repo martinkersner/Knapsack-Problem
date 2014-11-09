@@ -46,6 +46,7 @@ bool ExistCell(std::vector<Cell *> & column, int cost, int weight);
 bool EqualCell(Cell * cell, int cost, int weight);
 void DeleteTable(std::vector<std::vector<Cell *>> & table);
 void ReducePrecisionInstances(std::vector<Instance *> & instances, int precision);
+int GetSumCost(Instance * inst, std::vector<bool> solution);
 
 bit CreateMask(int l);
 bit ReducePrecision(int n, int p);

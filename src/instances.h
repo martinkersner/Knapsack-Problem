@@ -28,6 +28,7 @@ struct Instance {
     int id;                        // ID of instance
     std::vector<int> weight;       // weight of all items
     std::vector<int> cost;         // cost of all items
+    std::vector<int> appr_cost;     // approximated cost of all items
 
     // auxiliary variables
     int sum_cost;                  // sum of all item costs 

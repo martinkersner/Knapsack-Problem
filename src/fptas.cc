@@ -72,8 +72,9 @@ std::vector<bool> Evaluate(Instance * inst, int capacity, int max_items) {
 
     std::vector<bool> solution = GetSolutionPath(&table, c_w, inst);
 
+
     // set the best cost of particular knapsack configuration
-    inst->sum_cost = c_w->cost;
+    inst->sum_cost = GetSumCost(inst, solution);
 
     // deallocate all nodes
     DeleteTable(table);
@@ -95,7 +96,7 @@ std::vector<std::vector<Cell *>> CreateNetwork(Instance * inst, int capacity) {
     std::vector<std::vector<Cell *>> table;
 
     Cell * tmp_cell = NULL;
-    std::vector<int> costs = inst->cost;
+    std::vector<int> costs = inst->appr_cost;
     std::vector<int> weights = inst->weight;
 
     Cell * init_cell = CreateCell( costs.front(), 
@@ -367,7 +368,26 @@ void ReducePrecisionInstances(std::vector<Instance *> & instances, int precision
     // cost
     for (auto i_it = instances.begin(); i_it != instances.end(); ++i_it)
         for (auto c_it = (*i_it)->cost.begin(); c_it != (*i_it)->cost.end(); ++c_it)
-            *c_it = bit2int(ReducePrecision(*c_it, precision));
+            (*i_it)->appr_cost.push_back(bit2int(ReducePrecision(*c_it, precision)));
+}
+
+/**
+ * Sums real costs of output configuration.
+ *
+ * @param   inst
+ * @param   solution  
+ * @return            sum of costs from final configuration
+ */
+int GetSumCost(Instance * inst, std::vector<bool> solution) {
+    int sum_cost = 0;
+
+    auto b_it = solution.begin();
+    for (auto it = inst->cost.begin(); it != inst->cost.end(); ++it, ++b_it) {
+        if (*b_it)
+            sum_cost += *it;
+    }
+
+    return sum_cost;
 }
 
 /**
