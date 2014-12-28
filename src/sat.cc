@@ -128,3 +128,7 @@ void SatInstance::PrintWeights() {
 
     std::cout << std::endl;
 }
+
+int SatInstance::GetLength() {
+    return this->length;
+}

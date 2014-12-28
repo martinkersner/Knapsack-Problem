@@ -28,6 +28,7 @@ class SatInstance {
         ~SatInstance();
         void PrintFormula();
         void PrintWeights();
+        int GetLength();
 
         std::vector<int> weights;
         BooleanFormula formula;
