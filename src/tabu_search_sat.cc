@@ -19,30 +19,25 @@ int main(int argc, char **argv) {
         Settings settings;
         settings.neighborhoodSize = 1;
         settings.populationLength = 1;
-        settings.numberIterations = 5;
-        settings.duration = 10;
+        settings.numberIterations = 50;
+        settings.duration = 5;
 
         SatInstance inst = SatInstance(file_name);
 
         settings.solutionSize = inst.GetLength();
 
         // set seed
-        srand(1);
-        //srand(time(NULL));
+        //srand(1);
+        srand(time(NULL));
 
         SolveTabuSearch(inst, settings);
-
-        //inst->PrintSolutions();
     }
 
     return EXIT_SUCCESS;
 }
 
 /**
- * Solves given instances by tabu search method.
- *
- * @param   inst                different instances of knapsack problem
- * @param   neighborhood_size
+ * Solves given instance by tabu search method.
  */
 void SolveTabuSearch(SatInstance & inst, 
                      Settings & settings) {
@@ -54,18 +49,16 @@ void SolveTabuSearch(SatInstance & inst,
     auto population = InitializePopulation(settings); 
     auto tabu = InitializeTabu();
 
-    solution = Evaluate(inst, population, tabu, settings);
-//    (*inst_it)->solution = solution;
+    Evaluate(inst, population, tabu, settings);
 }
 
 /**
  * Function operates the main parts of algorithm.
  */
-std::vector<bool> 
-Evaluate(SatInstance & inst, 
-         Population population, 
-         std::vector<Tabu> tabu,
-         Settings & settings) {
+void Evaluate(SatInstance & inst, 
+              Population population, 
+              std::vector<Tabu> tabu,
+              Settings & settings) {
 
     // create binary solution
     int solutionLength = inst.GetLength();
@@ -99,6 +92,7 @@ Evaluate(SatInstance & inst,
 
              // find the best temporary solution
              bestState = CompareStates(tmp_solution, bestState);
+//             solution = bestState.solution;
          }
 
          tmp_population = tmp_next_population;
@@ -107,10 +101,7 @@ Evaluate(SatInstance & inst,
          ClearTabu(tabu);
      }
 
-//     // set the best cost of particular knapsack configuration
-//     inst->sum_cost = GetSumCost(inst, solution);
-
-     return solution;
+     PrintBest(bestState);
 }
 
 /**
@@ -159,7 +150,6 @@ GetNeighbors(std::vector<bool> & solution,
             AddOneTabu(neighbor, tabu, settings.duration);
             state = SolveBooleanFormula(inst, neighbor);
 
-            // TODO review
             neighborhood.push_back(state);
         }
     }
@@ -235,14 +225,6 @@ void PrintBinaryVector(std::vector<bool> bv) {
 }
 
 /**
- * Print vector of binary vectors.
- */
-//void PrintVectorBinaryVector(std::vector<std::vector<bool>> bvv) {
-//    for (auto bv : bvv)
-//        PrintBinaryVector(bv);
-//}
-
-/**
  * Generates random binary vector.
  */
 std::vector<bool> GenerateBinaryVector(int length) {
@@ -271,14 +253,8 @@ BestNeighbor(SatInstance & inst, std::vector<State> & neighbors) {
     else
         bestSolution = neighbors.at(0);
 
-    // searching for the best neighbor among the rest of unreviewed members
-    int bestWeight = 0;
-    for (auto neighbor : neighbors) {
-        if (bestWeight < neighbor.weightSum) {
-            bestWeight = neighbor.weightSum;
-            bestSolution = neighbor;
-        }
-    }
+    for (auto neighbor : neighbors)
+        bestSolution = CompareStates(bestSolution, neighbor);
 
     return bestSolution;
 }
@@ -340,20 +316,6 @@ bool FlipBool(bool b) {
     else
         return true;
 }
-
-///**
-// * Computes cost of given solution.
-// */
-//int EvaluateSolution2(Instance & inst, std::vector<bool> & solution) {
-//    int cost = 0;
-//
-//    auto sol_it = solution.begin();
-//    for (auto c_it = inst.cost.begin() ; c_it != inst.cost.end(); ++c_it, ++sol_it)
-//        if (*sol_it == true)
-//           cost += *c_it;
-//
-//    return cost;
-//}
 
 /**
  * Clears states from tabu list after tabu interval expires.
@@ -422,45 +384,6 @@ Tabu CreateTabu(std::vector<bool> solution, int duration) {
 }
 
 /**
- * Finds the best solution in given vector of solutions.
- */
-//void BestSolution(Population & solutions, 
-//                  Instance & inst, 
-//                  std::vector<bool> & best_solution) {
-//
-//    int best_cost = EvaluateSolution2(inst, best_solution);
-//    int tmp_cost;
-//
-//    for (auto best_it : solutions) {
-//        tmp_cost= EvaluateSolution2(inst, best_it);
-//
-//        if (tmp_cost > best_cost) {
-//            best_cost = tmp_cost;
-//            best_solution = best_it;
-//        }
-//    }
-//}
-
-///**
-// * Sums real costs of output configuration.
-// *
-// * @param   inst
-// * @param   solution  
-// * @return            sum of costs from final configuration
-// */
-//int GetSumCost(Instance * inst, std::vector<bool> solution) {
-//    int sum_cost = 0;
-//
-//    auto b_it = solution.begin();
-//    for (auto it = inst->cost.begin(); it != inst->cost.end(); ++it, ++b_it) {
-//        if (*b_it)
-//            sum_cost += *it;
-//    }
-//
-//    return sum_cost;
-//}
-
-/**
  *  Creates vector of zeros of given length.
  */
 std::vector<bool> ZeroSolution(int length) {
@@ -473,21 +396,6 @@ std::vector<bool> ZeroSolution(int length) {
     return zeros;
 }
 
-///**
-// * Prints sum of weights from items in knapsack.
-// */
-//void PrintWeights(Instance * inst, std::vector<bool> & solution) {
-//    int weight = 0;
-//
-//    auto sol_it = solution.begin();
-//    for (auto w_it = inst->weight.begin() ; w_it != inst->weight.end(); ++w_it, ++sol_it) {
-//        if (*sol_it == 1)
-//            weight += *w_it;
-//    }
-//
-//    std::cout << weight << std::endl;
-//}
-
 State CompareStates(State & s1, State & s2) {
     if (s2.weightSum == INVALID_SOLUTION && s1.weightSum == INVALID_SOLUTION)
         return LowerViolated(s1, s2);
@@ -495,7 +403,7 @@ State CompareStates(State & s1, State & s2) {
         return s2;
     else if (s2.weightSum == INVALID_SOLUTION && s1.weightSum > 0)
         return s1;
-    else if (s2.numberViolated < s1.numberViolated)
+    else if (s2.weightSum > s1.weightSum)
         return s2;
     else
         return s1;
@@ -518,7 +426,7 @@ State CreateState(std::vector<bool> & solution) {
 }
 
 int CountWeights(std::vector<bool> & solution, std::vector<int> & weights) {
-    int weightSum;
+    int weightSum = 0;
 
     auto w_it = weights.begin();
     for (auto s_it : solution) {
@@ -529,4 +437,15 @@ int CountWeights(std::vector<bool> & solution, std::vector<int> & weights) {
     }
 
     return weightSum;
+}
+
+
+void PrintBest(State & best) {
+    for (auto s : best.solution)
+        std::cout << s;
+
+    std::cout << std::endl;
+
+    std::cout << "WS: " << best.weightSum << std::endl;
+    std::cout << "NV: " << best.numberViolated << std::endl;
 }

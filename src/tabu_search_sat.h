@@ -62,10 +62,10 @@ void PrintVectorBinaryVector(std::vector<std::vector<bool>> bvv);
 
 std::vector<bool> GenerateBinaryVector(int length);
 
-std::vector<bool> Evaluate(SatInstance & inst, 
-                           Population population, 
-                           std::vector<Tabu> tabu,
-                           Settings & settings);
+void Evaluate(SatInstance & inst, 
+              Population population, 
+              std::vector<Tabu> tabu,
+              Settings & settings);
 
 State
 BestNeighbor(SatInstance & inst, std::vector<State> & neighbors);
@@ -102,5 +102,7 @@ int CountWeights(std::vector<bool> & solution, std::vector<int> & weights);
 State CompareStates(State & s1, State & s2);
 
 State LowerViolated(State & s1, State & s2);
+
+void PrintBest(State & best);
 
 #endif //TABU_SEARCH_SAT_H
