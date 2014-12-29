@@ -105,4 +105,6 @@ State LowerViolated(State & s1, State & s2);
 
 void PrintBest(State & best);
 
+void UnitTests();
+
 #endif //TABU_SEARCH_SAT_H

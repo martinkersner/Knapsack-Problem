@@ -13,12 +13,15 @@
 #include "tabu_search_sat.h"
 
 int main(int argc, char **argv) {
+
+    //UnitTests();
+    
     if (argc > MIN_PARAM) {
         char * file_name = argv[1];
 
         Settings settings;
         settings.neighborhoodSize = 1;
-        settings.populationLength = 1;
+        settings.populationLength = 4;
         settings.numberIterations = 50;
         settings.duration = 5;
 
@@ -82,7 +85,7 @@ void Evaluate(SatInstance & inst,
          // select best solution
          // update population
 
-         AddTabu(tmp_population, tabu, duration);
+         //AddTabu(tmp_population, tabu, duration);
          tmp_next_population.clear();
 
          for (auto popu_it : tmp_population) {
@@ -448,4 +451,52 @@ void PrintBest(State & best) {
 
     std::cout << "WS: " << best.weightSum << std::endl;
     std::cout << "NV: " << best.numberViolated << std::endl;
+}
+
+void UnitTests() {
+    // Unit 0
+    SatInstance si = SatInstance("../data-sat/sat0.dat");
+
+    std::vector<bool> s1 = {0, 0, 0, 1};
+    State u1 = SolveBooleanFormula(si, s1);
+    if (u1.weightSum != 6 || u1.numberViolated != 0)
+        std::cerr << "UNIT TEST 1 FAILED" << std::endl;
+
+    std::vector<bool> s2 = {1, 0, 0, 1};
+    State u2 = SolveBooleanFormula(si, s2);
+    if (u2.weightSum != 8 || u2.numberViolated != 0)
+        std::cerr << "UNIT TEST 2 FAILED" << std::endl;
+
+    std::vector<bool> s3 = {1, 1, 1, 0};
+    State u3 = SolveBooleanFormula(si, s3);
+    if (u3.weightSum != 7 || u3.numberViolated != 0)
+        std::cerr << "UNIT TEST 3 FAILED" << std::endl;
+
+    std::vector<bool> s4 = {1, 1, 1, 1};
+    State u4 = SolveBooleanFormula(si, s4);
+    if (u4.weightSum != INVALID_SOLUTION || u4.numberViolated != 1)
+        std::cerr << "UNIT TEST 4 FAILED" << std::endl;
+
+    // Unit 1
+    si = SatInstance("../data-sat/sat1.dat");
+    std::vector<bool> s5 = {0, 1, 1, 0, 1, 0};
+    State u5 = SolveBooleanFormula(si, s5);
+    if (u5.weightSum != 11 || u5.numberViolated != 0)
+        std::cerr << "UNIT TEST 5 FAILED" << std::endl;
+
+    // Unit 2
+    si = SatInstance("../data-sat/sat2.dat");
+    std::vector<bool> s6 = {0, 1, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 0, 0, 1};
+    State u6 = SolveBooleanFormula(si, s6);
+    if (u6.weightSum != 43 || u6.numberViolated != 0)
+        std::cerr << "UNIT TEST 6 FAILED" << std::endl;
+
+    // Unit 3
+    si = SatInstance("../data-sat/sat3.dat");
+    std::vector<bool> s7 = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1};
+    State u7 = SolveBooleanFormula(si, s7);
+    if (u7.weightSum != 77 || u7.numberViolated != 0)
+        std::cerr << "UNIT TEST 7 FAILED" << std::endl;
+
+    exit(EXIT_SUCCESS);
 }
