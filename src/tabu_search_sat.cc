@@ -88,6 +88,8 @@ void Evaluate(SatInstance & inst,
     int tmpWeightSum = 0;
     int recentChange = 0;
 
+    std::vector<TabuClause> vectorTabuClause;
+
      //for (int i = 0; i < numberIterations; ++i ) {
      int iteration = 0;
      while (1) {
@@ -96,11 +98,10 @@ void Evaluate(SatInstance & inst,
          // select best solution
          // update population
 
-         //AddTabu(tmp_population, tabu, duration);
          tmp_next_population.clear();
 
          for (auto popu_it : tmp_population) {
-             neighbors = GetNeighbors(popu_it, tabu, inst, settings);
+             neighbors = GetNeighbors(popu_it, tabu, vectorTabuClause, inst, settings);
              tmp_solution = BestNeighbor(inst, neighbors);
              tmp_next_population.push_back(tmp_solution.solution);
 
@@ -110,7 +111,8 @@ void Evaluate(SatInstance & inst,
 
          tmp_population = tmp_next_population;
 
-         ClearTabu(tabu);
+         //ClearTabu(tabu);
+         ClearTabuClause(vectorTabuClause);
 
          // terminating of iterations
          if (tmpWeightSum == bestState.weightSum && bestState.weightSum != -1) {
@@ -162,6 +164,7 @@ Population InitializePopulation(Settings & settings) {
 std::vector<State> 
 GetNeighbors(std::vector<bool> & solution, 
              std::vector<Tabu> & tabu,
+             std::vector<TabuClause> & vectorTabuClause,
              SatInstance & inst,
              Settings & settings) {
 
@@ -174,10 +177,13 @@ GetNeighbors(std::vector<bool> & solution,
     for (int i = 0; i < vector_size; ++i) {
         neighbor = FlipBit(solution, i);
 
-        // compare with tabu list
-        if (!IsTabu(neighbor, tabu)) {
-            AddOneTabu(neighbor, tabu, settings.duration);
-            state = SolveBooleanFormula(inst, neighbor);
+//        if (!IsTabu(neighbor, tabu)) {
+//            AddOneTabu(neighbor, tabu, settings.duration);
+        if (!IsSolutionInTabuClause(neighbor, vectorTabuClause)) {
+            state = SolveBooleanFormula(inst, 
+                                        neighbor, 
+                                        vectorTabuClause, 
+                                        settings.duration);
 
             neighborhood.push_back(state);
         }
@@ -288,10 +294,18 @@ BestNeighbor(SatInstance & inst, std::vector<State> & neighbors) {
     return bestSolution;
 }
 
-State SolveBooleanFormula(SatInstance & inst, std::vector<bool> & solution) {
+State SolveBooleanFormula(SatInstance & inst, 
+                          std::vector<bool> & solution,
+                          std::vector<TabuClause> & vectorTabuClause,
+                          int duration) {
+
     State state = CreateState(solution);
     bool result;
     bool violated = false;
+
+    // tabu clause
+    int size = solution.size();
+    TabuClause tabuClause;
 
     for (auto bf_it : inst.formula) {
         result = SolveClause(bf_it, solution);
@@ -300,6 +314,10 @@ State SolveBooleanFormula(SatInstance & inst, std::vector<bool> & solution) {
         if (!result) {
             state.numberViolated++;
             violated = true;
+
+            // tabu clause
+            tabuClause = CreateTabuClause(bf_it, size, duration);
+            AddTabuClause(vectorTabuClause, tabuClause);
         }
     }
 
@@ -357,7 +375,23 @@ void ClearTabu(std::vector<Tabu> & tabu) {
         tabu_it->duration--;
         if (tabu_it->duration <= 0)
             tabu_delete.push_back(tabu_it);
+    }
 
+    // delete tabu
+    for (auto tabu_del_it : tabu_delete)
+        tabu.erase(tabu_del_it);
+}
+
+/**
+ * Clears tabu clause after tabu interval expires.
+ */
+void ClearTabuClause(std::vector<TabuClause> & tabu) {
+    std::vector<std::vector<TabuClause>::iterator> tabu_delete;
+
+    for (auto tabu_it = tabu.begin(); tabu_it != tabu.end(); ++tabu_it) {
+
+        tabu_it->duration--;
+        if (tabu_it->duration <= 0) { tabu_delete.push_back(tabu_it); }
     }
 
     // delete tabu
@@ -494,42 +528,44 @@ void PrintMaxWeight(SatInstance & inst) {
 
 bool UnitTests() {
     bool result = true;
+    std::vector<TabuClause> vectorTabuClause;
+    int d = 0;
 
     // Unit 0
     SatInstance si = SatInstance("../data-sat/sat0.dat");
 
     std::vector<bool> s1 = {0, 0, 0, 1};
-    State u1 = SolveBooleanFormula(si, s1);
+    State u1 = SolveBooleanFormula(si, s1, vectorTabuClause, d);
     result &= UnitTestEvaluate(1, u1, 6, 0);
 
     std::vector<bool> s2 = {1, 0, 0, 1};
-    State u2 = SolveBooleanFormula(si, s2);
+    State u2 = SolveBooleanFormula(si, s2, vectorTabuClause, d);
     result &= UnitTestEvaluate(2, u2, 8, 0);
 
     std::vector<bool> s3 = {1, 1, 1, 0};
-    State u3 = SolveBooleanFormula(si, s3);
+    State u3 = SolveBooleanFormula(si, s3, vectorTabuClause, d);
     result &= UnitTestEvaluate(3, u3, 7, 0);
 
     std::vector<bool> s4 = {1, 1, 1, 1};
-    State u4 = SolveBooleanFormula(si, s4);
+    State u4 = SolveBooleanFormula(si, s4, vectorTabuClause, d);
     result &= UnitTestEvaluate(4, u4, INVALID_SOLUTION, 1);
 
     // Unit 1
     si = SatInstance("../data-sat/sat1.dat");
     std::vector<bool> s5 = {0, 1, 1, 0, 1, 0};
-    State u5 = SolveBooleanFormula(si, s5);
+    State u5 = SolveBooleanFormula(si, s5, vectorTabuClause, d);
     result &= UnitTestEvaluate(5, u5, 11, 0);
 
     // Unit 2
     si = SatInstance("../data-sat/sat2.dat");
     std::vector<bool> s6 = {0, 1, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 0, 0, 1};
-    State u6 = SolveBooleanFormula(si, s6);
+    State u6 = SolveBooleanFormula(si, s6, vectorTabuClause, d);
     result &= UnitTestEvaluate(6, u6, 43, 0);
 
     // Unit 3
     si = SatInstance("../data-sat/sat3.dat");
     std::vector<bool> s7 = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1};
-    State u7 = SolveBooleanFormula(si, s7);
+    State u7 = SolveBooleanFormula(si, s7, vectorTabuClause, d);
     result &= UnitTestEvaluate(7, u7, 77, 0);
 
     return result;
@@ -551,4 +587,133 @@ bool UnitTestEvaluate(int id,
         std::cerr << "UNIT TEST " << id << ": OK" << std::endl;
         return true;
     }
+}
+
+/**
+ * Checks if binaryVector contains pattern at particular positions.
+ */
+bool EqualTabuClause(TabuClause & input, 
+                     TabuClause & pattern) {
+    
+    if (!CompareBits(input.position, pattern.position))
+        return false;
+
+    bool equal = true;
+    
+    auto in_it = input.clause.begin();
+    auto pa_it = pattern.clause.begin();
+
+    for (auto pos_it : input.position) {
+       if (pos_it == 1) {
+           if (*in_it == *pa_it)
+               equal &= true;
+           else
+               equal &= false;
+       }
+
+       in_it++;
+       pa_it++;
+    }
+
+    return equal;
+}
+
+/**
+ * Creates binary vector which determines particular clause.
+ */
+std::vector<bool> 
+CreateClauseBinaryVector(std::vector<int> & positions, 
+                         int length) {
+
+    std::vector<bool> positionBinaryVector = ZeroSolution(length);
+
+    for (auto p_it : positions)
+        if (p_it > 0) { positionBinaryVector.at(std::abs(p_it)-1) = 1; }
+
+    return positionBinaryVector;
+}
+
+/**
+ * Creates binary vector in which the ones determines positions in binary vector.
+ */
+std::vector<bool> 
+CreatePositionBinaryVector(std::vector<int> & positions, 
+                           int length) {
+
+    std::vector<bool> positionBinaryVector = ZeroSolution(length);
+
+    for (auto p_it : positions)
+        positionBinaryVector.at(std::abs(p_it)-1) = 1;
+
+    return positionBinaryVector;
+}
+
+/**
+ * Compares given clause tabu clauses.
+ */
+bool IsTabuClause(std::vector<TabuClause> & tabu, 
+                  TabuClause & clause) {
+
+    for (auto t_it : tabu)
+       if (EqualTabuClause(t_it, clause))
+           return true;
+
+    return false;
+}
+
+/**
+ * Controls if tabu contains given clause. If not clause is added to tabu list.
+ */
+void AddTabuClause(std::vector<TabuClause> & tabu, 
+                   TabuClause & clause) {
+    
+    if (!IsTabuClause(tabu, clause))
+        tabu.push_back(clause);
+}
+
+/**
+ * Creates a tabu clause with all its attributes and intialize them.
+ */
+TabuClause 
+CreateTabuClause(std::vector<int> & clause,
+                 int size,
+                 int duration) {
+
+    TabuClause tc;
+    tc.clause = CreateClauseBinaryVector(clause, size);
+    tc.position = CreatePositionBinaryVector(clause, size);
+    tc.duration = duration;
+
+    return tc;
+}
+
+/**
+ * Checks if given solution doesnt consist from tabu clauses.
+ */
+bool IsSolutionInTabuClause(std::vector<bool> solution,
+                            std::vector<TabuClause> tabuClause) {
+
+    TabuClause simpleTc;
+
+    for (auto tc_it : tabuClause) {
+        simpleTc = CreateSimpleTabuClause(solution, tc_it.position, 0);
+
+        if (EqualTabuClause(simpleTc, tc_it)) 
+            return true;
+    }
+
+    return false;
+}
+
+TabuClause 
+CreateSimpleTabuClause(std::vector<bool> & clause,
+                       std::vector<bool> & position, 
+                       int duration) {
+
+    TabuClause tc;
+    tc.clause = clause;
+    tc.position = position;
+    tc.duration = duration;
+
+    return tc;
 }

@@ -41,6 +41,12 @@ struct Tabu {
     int duration;
 };
 
+struct TabuClause {
+    std::vector<bool> clause;
+    std::vector<bool> position;
+    int duration;
+};
+
 void SolveTabuSearch(SatInstance & inst, Settings & settings);
 
 Population InitializePopulation(Settings & settings);
@@ -54,6 +60,7 @@ std::vector<bool> FlipBit(std::vector<bool> vb, int position);
 std::vector<State> 
 GetNeighbors(std::vector<bool> & solution, 
              std::vector<Tabu> & tabu,
+             std::vector<TabuClause> & vectorTabuClause,
              SatInstance & inst,
              Settings & settings);
 
@@ -71,6 +78,8 @@ State
 BestNeighbor(SatInstance & inst, std::vector<State> & neighbors);
 
 void ClearTabu(std::vector<Tabu> & tabu);
+void ClearTabuClause(std::vector<TabuClause> & tabu);
+
 std::vector<Tabu> InitializeTabu();
 
 void AddTabu(Population & population, 
@@ -85,7 +94,10 @@ Tabu CreateTabu(std::vector<bool> solution, int duration);
 
 std::vector<bool> ZeroSolution(int length);
 
-State SolveBooleanFormula(SatInstance & inst, std::vector<bool> & solution);
+State SolveBooleanFormula(SatInstance & inst, 
+                          std::vector<bool> & solution,
+                          std::vector<TabuClause> & vectorTabuClause,
+                          int duration);
 
 bool FlipBool(bool b);
 
@@ -115,5 +127,35 @@ bool UnitTestEvaluate(int id,
                       State & s, 
                       int weightSum, 
                       int numberViolated);
+
+std::vector<bool> 
+CreatePositionBinaryVector(std::vector<int> & positions, 
+                           int length);
+
+bool IsTabuClause(std::vector<TabuClause> & tabu, 
+                  TabuClause & clause);
+
+void AddTabuClause(std::vector<TabuClause> & tabu, 
+                   TabuClause & clause);
+
+bool EqualTabuClause(TabuClause & input, 
+                     TabuClause & pattern);
+
+TabuClause 
+CreateTabuClause(std::vector<int> & clause,
+                 int size,
+                 int duration);
+
+std::vector<bool> 
+CreateClauseBinaryVector(std::vector<int> & positions, 
+                         int length);
+
+TabuClause 
+CreateSimpleTabuClause(std::vector<bool> & clause,
+                       std::vector<bool> & position, 
+                       int duration);
+
+bool IsSolutionInTabuClause(std::vector<bool> solution,
+                            std::vector<TabuClause> tabuClause);
 
 #endif //TABU_SEARCH_SAT_H
