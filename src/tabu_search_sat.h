@@ -158,4 +158,17 @@ CreateSimpleTabuClause(std::vector<bool> & clause,
 bool IsSolutionInTabuClause(std::vector<bool> solution,
                             std::vector<TabuClause> tabuClause);
 
+void comb(int n, 
+          int r, 
+          int *arr, 
+          int sz,
+          std::vector<std::vector<int>> & positions);
+
+std::vector<std::vector<int>> 
+CreateFlipCombinations(int length, 
+                       int neighborhoodSize);
+
+std::vector<bool> FlipPartBits(std::vector<bool> solution,
+                               std::vector<int> combinations);
+
 #endif //TABU_SEARCH_SAT_H

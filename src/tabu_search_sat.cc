@@ -12,6 +12,10 @@
 
 #include "tabu_search_sat.h"
 
+// Settings od different strategies
+#define EXACT_ITERATION
+#define TABU_CLAUSE
+
 int main(int argc, char **argv) {
 
     if (!UnitTests()) return EXIT_FAILURE;
@@ -21,14 +25,13 @@ int main(int argc, char **argv) {
 
         Settings settings;
         settings.neighborhoodSize = 1;
-        settings.populationLength = 4;
+        settings.populationLength = 2;
+        settings.duration = 5; // related to tabu list
 
         // * Either the definite number of iterations
         // * or if solution does not change for good within this time span, iteration is
         // then terminated
-        settings.numberIterations = 20;
-
-        settings.duration = 5; // related to tabu list
+        settings.numberIterations = 30;
 
         SatInstance inst = SatInstance(fileName);
 
@@ -90,9 +93,12 @@ void Evaluate(SatInstance & inst,
 
     std::vector<TabuClause> vectorTabuClause;
 
-     //for (int i = 0; i < numberIterations; ++i ) {
      int iteration = 0;
+#ifdef EXACT_ITERATION
+     for (int i = 0; i < numberIterations; ++i ) {
+#else
      while (1) {
+#endif
          // add it to tabu list
          // search neighborhood
          // select best solution
@@ -111,8 +117,12 @@ void Evaluate(SatInstance & inst,
 
          tmp_population = tmp_next_population;
 
-         //ClearTabu(tabu);
+         // CLEARING TABU LIST
+#ifdef TABU_CLAUSE
          ClearTabuClause(vectorTabuClause);
+#else         
+         ClearTabu(tabu);
+#endif
 
          // terminating of iterations
          if (tmpWeightSum == bestState.weightSum && bestState.weightSum != -1) {
@@ -172,14 +182,21 @@ GetNeighbors(std::vector<bool> & solution,
 
     std::vector<bool> neighbor;
     State state;
-    int vector_size = solution.size();
+    int vectorSize = solution.size();
 
-    for (int i = 0; i < vector_size; ++i) {
-        neighbor = FlipBit(solution, i);
+    std::vector<std::vector<int>> 
+    combinations = CreateFlipCombinations(vectorSize,
+                                          settings.neighborhoodSize);
 
-//        if (!IsTabu(neighbor, tabu)) {
-//            AddOneTabu(neighbor, tabu, settings.duration);
+    for (auto comb_it : combinations) {
+        neighbor = FlipPartBits(solution, comb_it);
+
+#ifdef TABU_CLAUSE
         if (!IsSolutionInTabuClause(neighbor, vectorTabuClause)) {
+#else
+        if (!IsTabu(neighbor, tabu)) {
+            AddOneTabu(neighbor, tabu, settings.duration);
+#endif
             state = SolveBooleanFormula(inst, 
                                         neighbor, 
                                         vectorTabuClause, 
@@ -310,14 +327,14 @@ State SolveBooleanFormula(SatInstance & inst,
     for (auto bf_it : inst.formula) {
         result = SolveClause(bf_it, solution);
 
-        // TODO different strategy?
         if (!result) {
             state.numberViolated++;
             violated = true;
 
-            // tabu clause
+#ifdef TABU_CLAUSE
             tabuClause = CreateTabuClause(bf_it, size, duration);
             AddTabuClause(vectorTabuClause, tabuClause);
+#endif
         }
     }
 
@@ -716,4 +733,59 @@ CreateSimpleTabuClause(std::vector<bool> & clause,
     tc.duration = duration;
 
     return tc;
+}
+
+/**
+ * Creates combinations of given size.
+ */
+void comb(int n, 
+          int r, 
+          int *arr, 
+          int sz,
+          std::vector<std::vector<int>> & positions) {
+
+    std::vector<int> tmpPositions;
+
+    for (int i = n; i >= r; i--) {
+        // choose the first element
+        arr[r - 1] = i-1;
+        if (r > 1) { // if still needs to choose
+            // recursive into smaller problem
+            comb(i - 1, r - 1, arr, sz, positions);
+        } 
+        else {
+            // print out one solution
+            for (int i = 0; i < sz; i ++)
+                tmpPositions.push_back(arr[i]);
+            
+            positions.push_back(tmpPositions);
+            tmpPositions.clear();
+        }
+    }
+}
+
+std::vector<std::vector<int>> 
+CreateFlipCombinations(int length, 
+                       int neighborhoodSize) {
+    int N = length;
+    int M = neighborhoodSize;
+    int *arr = new int[M];
+    std::vector<std::vector<int>> positions;
+
+    comb(N, M, arr, M, positions);
+
+    delete[] arr;
+
+    return positions;
+}
+
+std::vector<bool> FlipPartBits(std::vector<bool> solution,
+                               std::vector<int> combinations) {
+
+    std::vector<bool> flippedSolution = solution;
+
+    for (auto comb_it : combinations)
+        flippedSolution = FlipBit(flippedSolution, comb_it);
+
+    return flippedSolution;
 }
