@@ -30,6 +30,11 @@ class SatInstance {
         void PrintWeights();
         int GetLength();
 
+        std::vector<bool> GetSuboptimalSolution();
+        int GetSuboptimalWeightSum();
+        int SetMaxWeightSum(int maxWeightSum);
+        int GetMaxWeightSum();
+
         std::vector<int> weights;
         BooleanFormula formula;
 
@@ -40,7 +45,18 @@ class SatInstance {
         BooleanFormula ReadBooleanFormula(std::ifstream & file);
         std::vector<int> ParseWeights(std::string & line);
         Clause ParseClause(std::string &line);
+        std::vector<bool> ReadSuboptimalSolution(std::string & line);
+        std::vector<bool> ParseBinaryVector(std::string & line);
+        bool CharToBool(char c);
+        void SetSuboptimalSolution(std::vector<bool> & suboptimalSolution);
+        void SumSuboptimalWeights();
+        void SumMaxWeights();
 
         int length; // length of solutions; number of variables
+
+        std::vector<bool> suboptimalSolution; // given solution read from file
+        int suboptimalWeightSum;
+
+        int maxWeightSum;
 };
 #endif //SAT_HH

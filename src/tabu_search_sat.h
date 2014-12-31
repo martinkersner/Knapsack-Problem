@@ -13,14 +13,14 @@
 #include <bitset>
 #include <cmath>
 #include <random>
-
-#define MIN_PARAM    1
-#define NOT_EQUAL    1
+#include <stdlib.h>
 
 typedef std::vector<std::vector<bool>> Population;
 typedef std::vector<std::vector<bool>> Neighbors;
 
 const int INVALID_SOLUTION = -1;
+const int MIN_PARAM        =  1;
+const int NOT_EQUAL        =  1;
 
 struct State {
     std::vector<bool> solution;
@@ -105,6 +105,15 @@ State LowerViolated(State & s1, State & s2);
 
 void PrintBest(State & best);
 
-void UnitTests();
+void PrintSuboptimal(SatInstance & inst);
+
+void PrintMaxWeight(SatInstance & inst);
+
+bool UnitTests();
+
+bool UnitTestEvaluate(int id, 
+                      State & s, 
+                      int weightSum, 
+                      int numberViolated);
 
 #endif //TABU_SEARCH_SAT_H

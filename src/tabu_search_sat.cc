@@ -14,18 +14,23 @@
 
 int main(int argc, char **argv) {
 
-    //UnitTests();
+    if (!UnitTests()) return EXIT_FAILURE;
     
     if (argc > MIN_PARAM) {
-        char * file_name = argv[1];
+        char * fileName = argv[1];
 
         Settings settings;
         settings.neighborhoodSize = 1;
         settings.populationLength = 4;
-        settings.numberIterations = 50;
-        settings.duration = 5;
 
-        SatInstance inst = SatInstance(file_name);
+        // * Either the definite number of iterations
+        // * or if solution does not change for good within this time span, iteration is
+        // then terminated
+        settings.numberIterations = 20;
+
+        settings.duration = 5; // related to tabu list
+
+        SatInstance inst = SatInstance(fileName);
 
         settings.solutionSize = inst.GetLength();
 
@@ -69,8 +74,8 @@ void Evaluate(SatInstance & inst,
 
     // create temporary best state 
     State bestState = CreateState(solution);
-
     State tmp_solution;
+
     std::vector<State> neighbors;
 
     Population tmp_population = population;
@@ -79,7 +84,13 @@ void Evaluate(SatInstance & inst,
     int numberIterations = settings.numberIterations;
     int duration = settings.duration;
 
-     for (int i = 0; i < numberIterations; ++i ) {
+    // auxiliary variables related to terminating iterations
+    int tmpWeightSum = 0;
+    int recentChange = 0;
+
+     //for (int i = 0; i < numberIterations; ++i ) {
+     int iteration = 0;
+     while (1) {
          // add it to tabu list
          // search neighborhood
          // select best solution
@@ -95,16 +106,31 @@ void Evaluate(SatInstance & inst,
 
              // find the best temporary solution
              bestState = CompareStates(tmp_solution, bestState);
-//             solution = bestState.solution;
          }
 
          tmp_population = tmp_next_population;
 
-         // clear tabu
          ClearTabu(tabu);
+
+         // terminating of iterations
+         if (tmpWeightSum == bestState.weightSum && bestState.weightSum != -1) {
+             if (++recentChange > numberIterations)
+                 break;
+         }
+         else {
+             tmpWeightSum = bestState.weightSum;
+             recentChange = 0;
+         }
+
+         ++iteration;
+         assert(iteration <= 100);
      }
 
+     // print results
+     std::cout << "IT: " << iteration << std::endl;
      PrintBest(bestState);
+     PrintSuboptimal(inst);
+     PrintMaxWeight(inst);
 }
 
 /**
@@ -453,50 +479,76 @@ void PrintBest(State & best) {
     std::cout << "NV: " << best.numberViolated << std::endl;
 }
 
-void UnitTests() {
+void PrintSuboptimal(SatInstance & inst) {
+    for (auto s : inst.GetSuboptimalSolution())
+        std::cout << s;
+
+    std::cout << std::endl;
+
+    std::cout << "WS: " << inst.GetSuboptimalWeightSum() << std::endl;
+}
+
+void PrintMaxWeight(SatInstance & inst) {
+    std::cout << "MAX WS: " << inst.GetMaxWeightSum() << std::endl;
+}
+
+bool UnitTests() {
+    bool result = true;
+
     // Unit 0
     SatInstance si = SatInstance("../data-sat/sat0.dat");
 
     std::vector<bool> s1 = {0, 0, 0, 1};
     State u1 = SolveBooleanFormula(si, s1);
-    if (u1.weightSum != 6 || u1.numberViolated != 0)
-        std::cerr << "UNIT TEST 1 FAILED" << std::endl;
+    result &= UnitTestEvaluate(1, u1, 6, 0);
 
     std::vector<bool> s2 = {1, 0, 0, 1};
     State u2 = SolveBooleanFormula(si, s2);
-    if (u2.weightSum != 8 || u2.numberViolated != 0)
-        std::cerr << "UNIT TEST 2 FAILED" << std::endl;
+    result &= UnitTestEvaluate(2, u2, 8, 0);
 
     std::vector<bool> s3 = {1, 1, 1, 0};
     State u3 = SolveBooleanFormula(si, s3);
-    if (u3.weightSum != 7 || u3.numberViolated != 0)
-        std::cerr << "UNIT TEST 3 FAILED" << std::endl;
+    result &= UnitTestEvaluate(3, u3, 7, 0);
 
     std::vector<bool> s4 = {1, 1, 1, 1};
     State u4 = SolveBooleanFormula(si, s4);
-    if (u4.weightSum != INVALID_SOLUTION || u4.numberViolated != 1)
-        std::cerr << "UNIT TEST 4 FAILED" << std::endl;
+    result &= UnitTestEvaluate(4, u4, INVALID_SOLUTION, 1);
 
     // Unit 1
     si = SatInstance("../data-sat/sat1.dat");
     std::vector<bool> s5 = {0, 1, 1, 0, 1, 0};
     State u5 = SolveBooleanFormula(si, s5);
-    if (u5.weightSum != 11 || u5.numberViolated != 0)
-        std::cerr << "UNIT TEST 5 FAILED" << std::endl;
+    result &= UnitTestEvaluate(5, u5, 11, 0);
 
     // Unit 2
     si = SatInstance("../data-sat/sat2.dat");
     std::vector<bool> s6 = {0, 1, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 0, 0, 1};
     State u6 = SolveBooleanFormula(si, s6);
-    if (u6.weightSum != 43 || u6.numberViolated != 0)
-        std::cerr << "UNIT TEST 6 FAILED" << std::endl;
+    result &= UnitTestEvaluate(6, u6, 43, 0);
 
     // Unit 3
     si = SatInstance("../data-sat/sat3.dat");
     std::vector<bool> s7 = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1};
     State u7 = SolveBooleanFormula(si, s7);
-    if (u7.weightSum != 77 || u7.numberViolated != 0)
-        std::cerr << "UNIT TEST 7 FAILED" << std::endl;
+    result &= UnitTestEvaluate(7, u7, 77, 0);
 
-    exit(EXIT_SUCCESS);
+    return result;
+}
+
+/** 
+ * Evaluate success of particular unit test.
+ */
+bool UnitTestEvaluate(int id, 
+                      State & s, 
+                      int weightSum, 
+                      int numberViolated) {
+
+    if (s.weightSum != weightSum || s.numberViolated != numberViolated) {
+        std::cerr << "UNIT TEST " << id << ": FAIL" << std::endl;
+        return false;
+    }
+    else {
+        std::cerr << "UNIT TEST " << id << ": OK" << std::endl;
+        return true;
+    }
 }

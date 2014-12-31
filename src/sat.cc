@@ -11,19 +11,26 @@
 
 #include "sat.h"
 
-SatInstance::SatInstance(const char * file_name) {
+/**
+ * Constructor reads CNF in DIMACS format.
+ */
+SatInstance::SatInstance(const char * fileName) {
     std::vector<std::string> * params = NULL;
     SatInstance * inst = NULL;
 
-    if (ExistFile(file_name)) {
-        // read lines from file
-        std::ifstream file(file_name);
+    if (ExistFile(fileName)) {
+        std::ifstream file(fileName);
         std::string line; 
 
         ReadHead(file);
         this->weights = ReadWeights(file);
         this->formula = ReadBooleanFormula(file);
         this->length = weights.size();
+
+        // sums weights of suboptimal solution given by input file
+        SumSuboptimalWeights();
+
+        SumMaxWeights();
     }
     else {
         std::cerr << "Given file does not exist!" << std::endl;
@@ -31,27 +38,42 @@ SatInstance::SatInstance(const char * file_name) {
     }
 }
 
-SatInstance::~SatInstance() {
+/** Destructor */
+SatInstance::~SatInstance() {}
 
-}
-
-inline bool SatInstance::ExistFile(const char * file_name) {
-    std::ifstream ifs(file_name);
+/** 
+ * Check if given file exists.
+ */
+inline bool SatInstance::ExistFile(const char * fileName) {
+    std::ifstream ifs(fileName);
 
     if (ifs.good()) {
         ifs.close();
         return true;
-    } else {
+    } 
+    else {
         ifs.close();
         return false;
     }   
 }
 
-// Simply skips the first rows containing head.
+/** 
+ * Skips first four rows containing head.
+ * The second row is consisted from suboptimal solution,
+ * which is recorded for later purpose.
+ */
 void SatInstance::ReadHead(std::ifstream & file) {
     std::string line;
-    for (int i = 0; i < 4; ++i)
+    std::vector<bool> suboptimalSolution;
+
+    for (int i = 0; i < 4; ++i) {
        std::getline(file, line);
+
+       if (i == 1) {
+        suboptimalSolution = ReadSuboptimalSolution(line);
+        SetSuboptimalSolution(suboptimalSolution);
+        }
+    }
 }
 
 std::vector<int> SatInstance::ReadWeights(std::ifstream & file) {
@@ -131,4 +153,112 @@ void SatInstance::PrintWeights() {
 
 int SatInstance::GetLength() {
     return this->length;
+}
+
+/**
+ * Read line containing suboptimal solution given in format:
+ * c solution = 110011110010100
+ */
+std::vector<bool> SatInstance::ReadSuboptimalSolution(std::string & line) {
+    std::string delimiter = " ";
+    std::string token;
+
+    // delete the name of line
+    size_t pos = line.find(delimiter);
+    assert(line.substr(0, pos) == "c");
+    line.erase(0, pos + delimiter.length());
+
+    // parsing
+    while ((pos = line.find(delimiter)) != std::string::npos) {
+        token = line.substr(0, pos);
+        line.erase(0, pos + delimiter.length());
+    } 
+
+    return ParseBinaryVector(line);
+}
+
+/** 
+ * Parse a string containing binary vector.
+ */
+std::vector<bool> SatInstance::ParseBinaryVector(std::string & line) {
+    std::vector<bool> binaryVector;
+
+    for(char c : line)
+        binaryVector.push_back(CharToBool(c));
+
+    return binaryVector;
+}
+
+/**
+ * Char to bool conversion.
+ */
+bool SatInstance::CharToBool(char c) {
+    if (c == '0')
+        return 0;
+    else
+        return 1;
+}
+
+/**
+ * Setter of private variable suboptimalSolution.
+ */
+void SatInstance::SetSuboptimalSolution(std::vector<bool> & suboptimalSolution) {
+    this->suboptimalSolution = suboptimalSolution;
+}
+
+/**
+ * Sums the weights of suboptimal solution.
+ */
+void SatInstance::SumSuboptimalWeights() {
+    int weightSum = 0;
+
+    auto w_it = this->weights.begin();
+    for (auto b : this->suboptimalSolution) {
+        if (b == 1)
+            weightSum += *w_it;
+
+        w_it++;
+    }
+
+    this->suboptimalWeightSum = weightSum;
+}
+
+/**
+ * Getter of private variable suboptimalSolution.
+ */
+std::vector<bool> SatInstance::GetSuboptimalSolution() {
+    return this->suboptimalSolution;
+}
+
+/**
+ * Getter of private variable suboptimalWeightSum.
+ */
+int SatInstance::GetSuboptimalWeightSum() {
+    return this->suboptimalWeightSum;
+}
+
+/**
+ * Sums all weights.
+ */
+void SatInstance::SumMaxWeights() {
+    int maxWeightSum = 0;
+
+    for (auto w : this->weights)
+        maxWeightSum += w;
+
+    SetMaxWeightSum(maxWeightSum);
+}
+
+/**
+ * Getter of private variable maxWeightSum.
+ */
+int SatInstance::GetMaxWeightSum() {
+    return this->maxWeightSum;
+}
+
+/**
+ * Setter of private variable maxWeightSum.
+ */
+int SatInstance::SetMaxWeightSum(int maxWeightSum) {
+    this->maxWeightSum = maxWeightSum;
 }
